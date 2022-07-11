@@ -42,35 +42,37 @@ function BitcoinChart() {
       yAxis.tickFormat((t) => `$${t}`);
 
       const svgSelection = d3.select(this);
-      const container = svgSelection
+      const enterContainer = svgSelection
         .selectAll("#container")
         .data([data])
-        .join("g")
-        .attr("id", "container")
+        .enter()
+        .append("g")
+        .attr("id", "container");
+      enterContainer.append("g").attr("id", "xAxis");
+      enterContainer.append("g").attr("id", "yAxis");
+      enterContainer.append("g").attr("id", "candles");
+
+      const container = svgSelection
+        .select("#container")
         .attr("transform", `translate(${margins.left}, ${margins.top})`);
 
       container
-        .selectAll('#xAxis')
-        .data(d => [d]) // (re-)bind the data passed down from the candleselection as if it is an array, so we can use join
-        .join("g")
-        .attr("id", "xAxis")
+        .select("#xAxis")
         .attr("transform", `translate(0, ${margins.contentHeight})`)
         .call(xAxis);
 
       container
-        .selectAll('#yAxis')
-        .data(d => [d]) // (re-)bind the data passed down from the candleselection as if it is an array, so we can use join
-        .join('g')
-        .attr("id", "yAxis")
+        .select("#yAxis")
+        // .attr("transform",
         .call(yAxis);
 
       container.selectAll(".tick text").style("font-size", "16px");
 
-      const candles = container.selectAll("#candles").data(d => [d]).join('g').attr('id', 'candles');
+      const candles = container.select("#candles");
       const candleSelection = candles
         .selectAll("g")
-        .data(data)// (re-)bind the data passed down from the candleselection as if it is an array, so we can use join
-        .join("g") 
+        .data(data)
+        .join("g")
         .attr("class", "candle");
 
       candleSelection
