@@ -41,58 +41,58 @@ function BitcoinChart() {
 
       yAxis.tickFormat((t) => `$${t}`);
 
-      const svgSelection = d3.select(this).data([data]);
-
-      const container = svgSelection.selectAll("#container").data([data]);
-
-      const enter = container.enter().append("g").attr("id", "container");
-
-      container.attr("transform", `translate(${margins.left}, ${margins.top})`);
-
-      enter.append("g").attr("id", "xAxis");
+      const svgSelection = d3.select(this);
+      const container = svgSelection
+        .selectAll("#container")
+        .data([data])
+        .join("g")
+        .attr("id", "container")
+        .attr("transform", `translate(${margins.left}, ${margins.top})`);
 
       container
-        .select("#xAxis")
+        .selectAll('#xAxis')
+        .data(d => [d]) // (re-)bind the data passed down from the candleselection as if it is an array, so we can use join
+        .join("g")
+        .attr("id", "xAxis")
         .attr("transform", `translate(0, ${margins.contentHeight})`)
         .call(xAxis);
 
-      enter.append("g").attr("id", "yAxis");
+      container
+        .selectAll('#yAxis')
+        .data(d => [d]) // (re-)bind the data passed down from the candleselection as if it is an array, so we can use join
+        .join('g')
+        .attr("id", "yAxis")
+        .call(yAxis);
 
-      container.select("#yAxis").call(yAxis);
       container.selectAll(".tick text").style("font-size", "16px");
 
-      enter.append("g").attr("id", "candles");
-      const candles = container.select("#candles");
+      const candles = container.selectAll("#candles").data(d => [d]).join('g').attr('id', 'candles');
       const candleSelection = candles
         .selectAll("g")
-        .data(data)
-        .join("g")
+        .data(data)// (re-)bind the data passed down from the candleselection as if it is an array, so we can use join
+        .join("g") 
         .attr("class", "candle");
 
-      //   const line = container
-      //     .append("g")
-      //     .attr("fill", "black")
-      //     .selectAll("rect")
-      //     .data(data)
-      //     .join("rect")
-      //     .attr(
-      //       "x",
-      //       (d) => xScaleBand(xAccessor(d)) + xScaleBand.bandwidth() / 2 - 1
-      //     )
-      //     .attr("y", (d) => yScale(d.max))
-      //     .attr("width", 3)
-      //     .attr("height", (d) => Math.abs(yScale(d.max) - yScale(d.min)));
+      candleSelection
+        .selectAll(".candlewick") // in every candle g, select all candlewicks
+        .data(d => [d]) // (re-)bind the data passed down from the candleselection as if it is an array, so we can use join
+        .join("rect")
+        .attr("class", "candlewick")
+        .attr("x", (d) => xScaleBand(xAccessor(d)) + xScaleBand.bandwidth() / 2 - 1)
+        .attr("y", (d) => yScale(d.max))
+        .attr("width", 3)
+        .attr("height", (d) => Math.abs(yScale(d.max) - yScale(d.min)));
 
-      //   const bar = container
-      //     .append("g")
-      //     .selectAll("rect")
-      //     .data(data)
-      //     .join("rect")
-      //     .attr("fill", (d) => (d.open > d.close ? "red" : "green"))
-      //     .attr("x", (d) => xScaleBand(xAccessor(d)))
-      //     .attr("y", (d) => yScale(d.open > d.close ? d.open : d.close))
-      //     .attr("width", xScaleBand.bandwidth())
-      //     .attr("height", (d) => Math.abs(yScale(d.open) - yScale(d.close)));
+      candleSelection
+        .selectAll(".candlebody")
+        .data(d => [d]) // (re-)bind the data passed down from the candleselection as if it is an array, so we can use join
+        .join("rect")
+        .attr("class", "candlebody")
+        .attr("fill", (d) => (d.open > d.close ? "red" : "green"))
+        .attr("x", (d) => xScaleBand(xAccessor(d)))
+        .attr("y", (d) => yScale(d.open > d.close ? d.open : d.close))
+        .attr("width", xScaleBand.bandwidth())
+        .attr("height", (d) => Math.abs(yScale(d.open) - yScale(d.close)));
     });
   }
 
