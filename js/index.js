@@ -112,7 +112,7 @@ function BitcoinChart() {
                 .attr("id", "tooltip-y")
 
               g.append('rect')
-                .attr('fill', "white")
+                .attr('fill', "black")
                 .attr('stroke', "black")
                 .attr('stroke-width', 2)
                 .attr("x", -margins.left)
@@ -125,7 +125,7 @@ function BitcoinChart() {
                 .attr("y", e.clientY - margins.top)
                 .attr("dominant-baseline", "middle")
                 .attr("text-anchor", 'end')
-                .attr("fill", "black")
+                .attr("fill", "white")
                 .text(`$${Math.round(yScale.invert(e.clientY - margins.top))}`)
             }
             ,
@@ -172,7 +172,7 @@ function BitcoinChart() {
         .attr("x", (d) => xScaleBand(xAccessor(d)))
         .attr("y", (d) => yScale(d.open > d.close ? d.open : d.close))
         .attr("width", xScaleBand.bandwidth())
-        .attr("height", (d) => Math.abs(yScale(d.open) - yScale(d.close)));
+        .attr("height", (d) => Math.abs(yScale(d.open) - yScale(d.close)) > 1 ? Math.abs(yScale(d.open) - yScale(d.close)) : 1);
 
       candleSelection
         .selectAll(".invisible")
@@ -206,7 +206,7 @@ function BitcoinChart() {
                   .attr("id", "tooltip-x")
 
                 g.append('rect')
-                  .attr('fill', "white")
+                  .attr('fill', "black")
                   .attr('stroke', "black")
                   .attr('stroke-width', 2)
                   .attr("x", Math.max(xScaleBand(xAccessor(d)) + xScaleBand.bandwidth() / 2 - 60, 0))
@@ -219,7 +219,7 @@ function BitcoinChart() {
                   .attr("y", margins.contentHeight + 10)
                   .attr("dominant-baseline", "middle")
                   .attr("text-anchor", 'middle')
-                  .attr("fill", "black")
+                  .attr("fill", "white")
                   .text(`${timeFormatter(new Date(d.openTime))}`)
               }
               ,
