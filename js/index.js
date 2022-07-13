@@ -1,13 +1,16 @@
+
 function BitcoinChart() {
   let width = 720,
     height = 480,
-    margins = { top: 20, right: 40, bottom: 20, left: 40 },
+    margins = { top: 20, right: 40, bottom: 40, left: 80 },
     xScaleBand = d3.scaleBand(),
+    xScaleUtc = d3.scaleUtc(),
     yScale = d3.scaleLinear(),
-    xAxis = d3.axisBottom(xScaleBand),
+    xAxis = d3.axisBottom(xScaleUtc),
+    // xAxis2 = d3.axisBottom(xScaleBand),
     yAxis = d3.axisLeft(yScale),
-    timeFormatter = d3.timeFormat("%d %b"),
-    xPadding = 0.5;
+    timeFormatter = d3.timeFormat("%d %b %H:%M"),
+    xPadding = 0.2;
 
   function chart(selection) {
     selection.each(function (data) {
@@ -15,7 +18,7 @@ function BitcoinChart() {
       margins.contentHeight = height - margins.top - margins.bottom;
 
       const xAccessor = (d) => d.openTime;
-      // const xAccessor = (d) => new Date(d.openTime);
+      const xAccessorTime = (d) => new Date(d.openTime);
 
       // update scales
       xScaleBand
@@ -23,21 +26,22 @@ function BitcoinChart() {
         .range([0, margins.contentWidth])
         .padding(xPadding);
 
-      // const xScaleUtc = d3
-      //   .scaleUtc()
-      //   .domain(d3.extent(data, xAccessor))
-      //   .range([0, margins.contentWidth]);
+      // interval tussen de data items
+      const interval = data[1].openTime - data[0].openTime;
+
+      // om de scaleBand en scaleTime gelijk te trekken doen we een interval * (0.5 + halve padding)  eerder en een later erbij + padding
+      const minExtended = new Date(d3.min(data, xAccessor) - interval * (0.5 + xPadding / 2))
+      const maxExtended = new Date(d3.max(data, xAccessor) + interval * (0.5 + xPadding / 2))
+
+      xScaleUtc
+        .domain([minExtended, maxExtended])
+        .range([0, margins.contentWidth])
+        .ticks(1);
 
       // const minY = d3.min(data.map((d) => d.min));
       const maxY = d3.max(data.map((d) => d.max));
 
       yScale.domain([0, maxY]).range([margins.contentHeight, 0]).nice();
-
-      // Updating axis
-      xAxis.tickFormat((t) => {
-        const x = new Date(t);
-        return timeFormatter(x);
-      });
 
       yAxis.tickFormat((t) => `$${t}`);
 
@@ -49,6 +53,7 @@ function BitcoinChart() {
         .append("g")
         .attr("id", "container");
       enterContainer.append("g").attr("id", "xAxis");
+      // enterContainer.append("g").attr("id", "xAxis2");
       enterContainer.append("g").attr("id", "yAxis");
       enterContainer.append("g").attr("id", "candles");
 
@@ -61,12 +66,84 @@ function BitcoinChart() {
         .attr("transform", `translate(0, ${margins.contentHeight})`)
         .call(xAxis);
 
+      // Updating axis
+      // xAxis2.tickFormat((t) => {
+      //   const x = new Date(t);
+      //   return timeFormatter(x);
+      // });
+
+      // container
+      //   .select("#xAxis2")
+      //   .attr("transform", `translate(0, ${margins.contentHeight - 20})`)
+      //   .call(xAxis2);
+
       container
         .select("#yAxis")
         // .attr("transform",
         .call(yAxis);
 
-      container.selectAll(".tick text").style("font-size", "16px");
+      container.selectAll("#yAxis .tick text").style("font-size", "16px");
+
+      container.on("mouseleave", e => {
+        container.select("#tooltip-horizontal-line").remove();
+        container.select("#tooltip-vertical-line").remove();
+        container.select("#tooltip-x").remove();
+        container.select("#tooltip-y").remove();
+      })
+
+      container.on("mousemove", (e) => {
+        container.selectAll('#tooltip-horizontal-line')
+          .data([1])
+          .join('line')
+          .attr("id", "tooltip-horizontal-line")
+          .attr("stroke", "black")
+          .attr("stroke-width", 1)
+          .attr("stroke-dasharray", 4)
+          .attr("x1", 0)
+          .attr("x2", margins.contentWidth)
+          .attr("y1", e.clientY - margins.top)
+          .attr("y2", e.clientY - margins.top)
+
+        const tooltipY = container.selectAll('#tooltip-y')
+          .data([1])
+          .join(
+            enter => {
+              const g = enter.append('g')
+                .attr("id", "tooltip-y")
+
+              g.append('rect')
+                .attr('fill', "white")
+                .attr('stroke', "black")
+                .attr('stroke-width', 2)
+                .attr("x", -margins.left)
+                .attr("y", e.clientY - margins.top - 10)
+                .attr("width", margins.left)
+                .attr("height", 20)
+
+              g.append('text')
+                .attr("x", -10)
+                .attr("y", e.clientY - margins.top)
+                .attr("dominant-baseline", "middle")
+                .attr("text-anchor", 'end')
+                .attr("fill", "black")
+                .text(`$${Math.round(yScale.invert(e.clientY - margins.top))}`)
+            }
+            ,
+            update => {
+              update.select('rect')
+                .attr("y", e.clientY - margins.top - 10)
+
+              update.select('text')
+                .attr("y", e.clientY - margins.top)
+                .text(`$${Math.round(yScale.invert(e.clientY - margins.top))}`)
+
+              return update
+            }
+            ,
+            remove => remove.remove())
+
+
+      })
 
       const candles = container.select("#candles");
       const candleSelection = candles
@@ -80,10 +157,11 @@ function BitcoinChart() {
         .data(d => [d]) // (re-)bind the data passed down from the candleselection as if it is an array, so we can use join
         .join("rect")
         .attr("class", "candlewick")
-        .attr("x", (d) => xScaleBand(xAccessor(d)) + xScaleBand.bandwidth() / 2 - 1)
+        .attr("x", (d) => xScaleBand(xAccessor(d)) + xScaleBand.bandwidth() / 2 - 1) // -1 om precies in het midden te zetten bij een oneven breedte
         .attr("y", (d) => yScale(d.max))
         .attr("width", 3)
         .attr("height", (d) => Math.abs(yScale(d.max) - yScale(d.min)));
+        // .attr("height", (d) => margins.contentHeight);
 
       candleSelection
         .selectAll(".candlebody")
@@ -95,6 +173,68 @@ function BitcoinChart() {
         .attr("y", (d) => yScale(d.open > d.close ? d.open : d.close))
         .attr("width", xScaleBand.bandwidth())
         .attr("height", (d) => Math.abs(yScale(d.open) - yScale(d.close)));
+
+      candleSelection
+        .selectAll(".invisible")
+        .data(d => [d]) // (re-)bind the data passed down from the candleselection as if it is an array, so we can use join
+        .join("rect")
+        .attr("class", "invisible")
+        .attr("fill", "transparent")
+        .attr("x", (d) => xScaleBand(xAccessor(d)) - xPadding * xScaleBand.bandwidth() / 2)
+        .attr("y", (d) => 0)
+        .attr("width", margins.contentWidth / data.length)
+        .attr("height", margins.contentHeight)
+        .on("mouseenter", (event, d) => {
+          container
+            .selectAll("#tooltip-vertical-line")
+            .data(d => [d])
+            .join("line")
+            .attr("id", "tooltip-vertical-line")
+            .attr("stroke", "black")
+            .attr("stroke-width", 1)
+            .attr("stroke-dasharray", 4)
+            .attr("x1", xScaleBand(xAccessor(d)) + xScaleBand.bandwidth() / 2)
+            .attr("x2", xScaleBand(xAccessor(d)) + xScaleBand.bandwidth() / 2)
+            .attr("y1", (d) => 0)
+            .attr("y2", (d) => margins.contentHeight)
+
+          const tooltipX = container.selectAll('#tooltip-x')
+            .data(d => [d])
+            .join(
+              enter => {
+                const g = enter.append('g')
+                  .attr("id", "tooltip-x")
+
+                g.append('rect')
+                  .attr('fill', "white")
+                  .attr('stroke', "black")
+                  .attr('stroke-width', 2)
+                  .attr("x", Math.max(xScaleBand(xAccessor(d)) + xScaleBand.bandwidth() / 2 - 60, 0))
+                  .attr("y", margins.contentHeight)
+                  .attr("width", 120)
+                  .attr("height", 20)
+
+                g.append('text')
+                  .attr("x", xScaleBand(xAccessor(d)) + xScaleBand.bandwidth() / 2)
+                  .attr("y", margins.contentHeight + 10)
+                  .attr("dominant-baseline", "middle")
+                  .attr("text-anchor", 'middle')
+                  .attr("fill", "black")
+                  .text(`${timeFormatter(new Date(d.openTime))}`)
+              }
+              ,
+              update => {
+                update.select('rect')
+                  .attr("x", Math.max(xScaleBand(xAccessor(d)) + xScaleBand.bandwidth() / 2 - 60, 0))
+
+                update.select('text')
+                  .attr("x", Math.max(xScaleBand(xAccessor(d)) + xScaleBand.bandwidth() / 2, 60))
+                  .text(`${timeFormatter(new Date(d.openTime))}`)
+                return update
+              }
+              ,
+              remove => remove.remove())
+        })
     });
   }
 
@@ -126,7 +266,7 @@ function createSVGSVGElement(width, height, id) {
   return svgSelection;
 }
 
-const width = 800,
+const width = 1080,
   height = 600;
 
 const svgBasicShapesSelection = createSVGSVGElement(
@@ -135,60 +275,13 @@ const svgBasicShapesSelection = createSVGSVGElement(
   "bitcoin-chart"
 );
 
-const dummyData = [
-  {
-    openTime: 1657238400000,
-    open: 5,
-    close: 10,
-    min: 3,
-    max: 15,
-    volume: 123,
-  },
-  {
-    openTime: 1657324800000,
-    open: 10,
-    close: 14,
-    min: 8,
-    max: 24,
-    volume: 223,
-  },
-  {
-    openTime: 1657411200000,
-    open: 14,
-    close: 8,
-    min: 4,
-    max: 16,
-    volume: 113,
-  },
-  {
-    openTime: 1657497600000,
-    open: 8,
-    close: 24,
-    min: 3,
-    max: 34,
-    volume: 323,
-  },
-  {
-    openTime: 1657637600000,
-    open: 24,
-    close: 28,
-    min: 14,
-    max: 30,
-    volume: 222,
-  },
-];
-
 const newBitCoinChart = BitcoinChart().width(width).height(height);
 
-svgBasicShapesSelection.datum(dummyData).call(newBitCoinChart);
+const data = d3.json('data/juni-1d.json').then(result => {
 
-dummyData.push({
-  openTime: 1657767600000,
-  open: 28,
-  close: 22,
-  min: 14,
-  max: 31,
-  volume: 111,
-});
+  const transformedData = transformer(result)
+  svgBasicShapesSelection.datum(transformedData).call(newBitCoinChart);
 
-// svgBasicShapesSelection.datum(dummyData).call(newBitCoinChart);
+}).catch(err => console.log(err))
+
+
