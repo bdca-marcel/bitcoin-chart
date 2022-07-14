@@ -18,6 +18,19 @@ code {
   
 }
 
+#header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#btn-container {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: center;
+  }
+
 svg {
   display: block;
   margin: 0 auto;
