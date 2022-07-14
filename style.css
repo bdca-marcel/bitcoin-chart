@@ -24,6 +24,14 @@ code {
   justify-content: center;
 }
 
+#toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24px
+
+}
+
 #btn-container {
   display: flex;
   gap: 12px;
@@ -36,11 +44,20 @@ svg {
   margin: 0 auto;
 }
 
+#number-of-datapoints {
+  width: 50px;
+  text-align: center;
+}
+
 #triangle {
   transform-box: fill-box;
   transform-origin: center;
   animation: triangle-rotate 1s linear infinite forwards;
   animation-play-state: paused;
+}
+
+button.selected {
+ background-color: white;
 }
 
 #triangle.triangle-rotate {

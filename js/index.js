@@ -1,7 +1,23 @@
+let selectedJsonName = '1w';
+let movingAverageNumberOfDatapoints = 28;
+
+const createMovingAverageData = (data, numberOfPoints) => {
+  const result = [];
+  data.forEach((d, i) => {
+
+    if (numberOfPoints <= i) {
+      const numbers = data.slice(i + 1 - numberOfPoints, i + 1).map(d => d.open)
+      const newAvgPoint = { openTime: d.openTime, open: +d3.mean(numbers).toFixed(2) }
+      result.push(newAvgPoint)
+    }
+  })
+  return result
+}
 
 function BitcoinChart() {
   let width = 720,
     height = 480,
+    movingAverageNumberOfDatapoints = 28,
     margins = { top: 20, right: 40, bottom: 40, left: 80 },
     xScaleBand = d3.scaleBand(),
     xScaleUtc = d3.scaleUtc(),
@@ -14,7 +30,15 @@ function BitcoinChart() {
 
 
   function chart(selection) {
+
+    function candleColor(selection) {
+      selection
+        .attr("fill", (d) => (d.open > d.close ? "red" : "green"));
+
+      return selection;
+    }
     selection.each(function (data) {
+
       margins.contentWidth = width - margins.left - margins.right;
       margins.contentHeight = height - margins.top - margins.bottom;
 
@@ -57,6 +81,7 @@ function BitcoinChart() {
       // enterContainer.append("g").attr("id", "xAxis2");
       enterContainer.append("g").attr("id", "yAxis");
       enterContainer.append("g").attr("id", "candles");
+      enterContainer.append("g").attr("id", "lines");
 
       const container = svgSelection
         .select("#container")
@@ -164,6 +189,8 @@ function BitcoinChart() {
         .data(d => [d]) // (re-)bind the data passed down from the candleselection as if it is an array, so we can use join
         .join("rect")
         .attr("class", "candlewick")
+        .call(candleColor)
+        // .attr("fill", (d) => (d.open > d.close ? "red" : "green"))
         .attr("x", (d) => xScaleBand(xAccessor(d)) + xScaleBand.bandwidth() / 2 - 1) // -1 om precies in het midden te zetten bij een oneven breedte
         .attr("y", (d) => yScale(d.max))
         .attr("width", 1)
@@ -175,7 +202,8 @@ function BitcoinChart() {
         .data(d => [d]) // (re-)bind the data passed down from the candleselection as if it is an array, so we can use join
         .join("rect")
         .attr("class", "candlebody")
-        .attr("fill", (d) => (d.open > d.close ? "red" : "green"))
+        .call(candleColor)
+        // .attr("fill", (d) => (d.open > d.close ? "red" : "green"))
         .attr("x", (d) => xScaleBand(xAccessor(d)))
         .attr("y", (d) => yScale(d.open > d.close ? d.open : d.close))
         .attr("width", xScaleBand.bandwidth())
@@ -243,6 +271,32 @@ function BitcoinChart() {
               remove => remove.remove())
         })
 
+
+      //******************************************
+      // MOVING AVERAGE TRENDLINE
+      //******************************************
+      const movingAverageData = createMovingAverageData(data, movingAverageNumberOfDatapoints);
+      // console.log(movingAverageData)
+
+      const lineGenerator = d3.line()
+        .x(d => xScaleUtc(xAccessorTime(d)))
+        .y(d => yScale(d.open))
+
+      const lines = container.select("#lines");
+
+      const avgLineSelection = lines
+        .selectAll("#avg-line")
+
+      avgLineSelection
+        .data([movingAverageData])
+        .join("path")
+        .attr("id", "avg-line")
+        .attr('d', lineGenerator)
+        .attr('fill', 'none')
+        .attr('stroke', 'orange')
+        .attr('stroke-width', 2)
+        ;
+
       // ZOOM CODE
 
       // const zoomed = (event) => {
@@ -279,6 +333,11 @@ function BitcoinChart() {
     height = value;
     return chart;
   };
+  chart.movingAverageNumberOfDatapoints = function (value) {
+    if (!arguments.length) return movingAverageNumberOfDatapoints;
+    movingAverageNumberOfDatapoints = value;
+    return chart;
+  }
 
   return chart;
 }
@@ -308,23 +367,36 @@ const svgBasicShapesSelection = createSVGSVGElement(
 
 const newBitCoinChart = BitcoinChart().width(width).height(height);
 
-const loadChart = (jsonName) => {
-
+const loadChart = (jsonName, movingAverageNumberOfDatapoints) => {
   d3.json(`data/${jsonName}`).then(result => {
+    newBitCoinChart.movingAverageNumberOfDatapoints(movingAverageNumberOfDatapoints)
     const transformedData = transformer(result)
     svgBasicShapesSelection.datum(transformedData).call(newBitCoinChart);
   }).catch(err => console.log(err))
-
 }
 
-loadChart('juni-1w.json')
-
-const onClick = (target) => {
-  loadChart(`juni-${target}.json`)
-}
+loadChart('2022-1w.json')
 
 const btns = document.querySelectorAll('.btn')
 
+const onClick = (btn) => {
+  selectedJsonName = btn.dataset.target;
+  loadChart(`2022-${selectedJsonName}.json`, movingAverageNumberOfDatapoints)
+
+  btns.forEach(btn => btn.classList.remove("selected"))
+  btn.classList.add("selected")
+}
+
+
 btns.forEach(btn => {
-  btn.addEventListener('click', () => onClick(btn.dataset.target))
+  btn.addEventListener('click', () => onClick(btn))
 })
+
+const movingAvgInput = document.querySelector('#number-of-datapoints');
+
+const onInputChange = (value) => {
+  movingAverageNumberOfDatapoints = value;
+  loadChart(`2022-${selectedJsonName}.json`, movingAverageNumberOfDatapoints)
+}
+
+movingAvgInput.addEventListener('change', (e) => onInputChange(e.target.value))
