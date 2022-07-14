@@ -1,8 +1,24 @@
+let selectedJsonName = '1w';
+let movingAverageNumberOfDatapoints = 28;
+
+const createMovingAverageData = (data, numberOfPoints) => {
+  const result = [];
+  data.forEach((d, i) => {
+
+    if (numberOfPoints <= i) {
+      const numbers = data.slice(i + 1 - numberOfPoints, i + 1).map(d => d.open)
+      const newAvgPoint = { openTime: d.openTime, open: +d3.mean(numbers).toFixed(2) }
+      result.push(newAvgPoint)
+    }
+  })
+  return result
+}
 
 function BitcoinChart() {
   let width = 720,
     height = 480,
-    margins = { top: 20, right: 40, bottom: 40, left: 80 },
+    movingAverageNumberOfDatapoints = 28;
+  margins = { top: 20, right: 40, bottom: 40, left: 80 },
     xScaleBand = d3.scaleBand(),
     xScaleUtc = d3.scaleUtc(),
     yScale = d3.scaleLinear(),
@@ -15,6 +31,7 @@ function BitcoinChart() {
 
   function chart(selection) {
     selection.each(function (data) {
+
       margins.contentWidth = width - margins.left - margins.right;
       margins.contentHeight = height - margins.top - margins.bottom;
 
@@ -57,6 +74,7 @@ function BitcoinChart() {
       // enterContainer.append("g").attr("id", "xAxis2");
       enterContainer.append("g").attr("id", "yAxis");
       enterContainer.append("g").attr("id", "candles");
+      enterContainer.append("g").attr("id", "lines");
 
       const container = svgSelection
         .select("#container")
@@ -239,6 +257,30 @@ function BitcoinChart() {
               ,
               remove => remove.remove())
         })
+
+      const movingAverageData = createMovingAverageData(data, movingAverageNumberOfDatapoints);
+      // console.log(movingAverageData)
+
+
+      const lineGenerator = d3.line()
+        .x(d => xScaleUtc(xAccessorTime(d)))
+        .y(d => yScale(d.open))
+
+      const lines = container.select("#lines");
+
+      const avgLineSelection = lines
+        .selectAll("#avg-line")
+
+      avgLineSelection
+        .data([movingAverageData])
+        .join("path")
+        .attr("id", "avg-line")
+        .attr('d', lineGenerator)
+        .attr('fill', 'none')
+        .attr('stroke', 'orange')
+        .attr('stroke-width', 2)
+        ;
+
     });
   }
 
@@ -252,6 +294,11 @@ function BitcoinChart() {
     height = value;
     return chart;
   };
+  chart.movingAverageNumberOfDatapoints = function (value) {
+    if (!arguments.length) return movingAverageNumberOfDatapoints;
+    movingAverageNumberOfDatapoints = value;
+    return chart;
+  }
 
   return chart;
 }
@@ -281,19 +328,19 @@ const svgBasicShapesSelection = createSVGSVGElement(
 
 const newBitCoinChart = BitcoinChart().width(width).height(height);
 
-const loadChart = (jsonName) => {
-
+const loadChart = (jsonName, movingAverageNumberOfDatapoints) => {
   d3.json(`data/${jsonName}`).then(result => {
+    newBitCoinChart.movingAverageNumberOfDatapoints(movingAverageNumberOfDatapoints)
     const transformedData = transformer(result)
     svgBasicShapesSelection.datum(transformedData).call(newBitCoinChart);
   }).catch(err => console.log(err))
-
 }
 
 loadChart('juni-1w.json')
 
 const onClick = (target) => {
-  loadChart(`juni-${target}.json`)
+  selectedJsonName = target;
+  loadChart(`juni-${selectedJsonName}.json`, movingAverageNumberOfDatapoints)
 }
 
 const btns = document.querySelectorAll('.btn')
@@ -301,3 +348,12 @@ const btns = document.querySelectorAll('.btn')
 btns.forEach(btn => {
   btn.addEventListener('click', () => onClick(btn.dataset.target))
 })
+
+const movingAvgInput = document.querySelector('#number-of-datapoints');
+
+const onInputChange = (value) => {
+  movingAverageNumberOfDatapoints = value;
+  loadChart(`juni-${selectedJsonName}.json`, movingAverageNumberOfDatapoints)
+}
+
+movingAvgInput.addEventListener('change', (e) => onInputChange(e.target.value))
