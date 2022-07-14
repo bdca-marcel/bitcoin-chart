@@ -25,15 +25,17 @@
   </div>
   <div id="toolbar">
     <div id="btn-container">
-      <button class="btn" data-target="1w">week</button>
+      <button class="btn selected" data-target="1w">week</button>
       <button class="btn" data-target="1d">day</button>
       <button class="btn" data-target="12h">12 hours</button>
       <button class="btn" data-target="4h">4 hours</button>
       <button class="btn" data-target="1h">1 hour</button>
     </div>
-    <label for="number-of-datapoints">Base moving average on</label>
-    <input type="number" id="number-of-datapoints" name="number-of-datapoints" value=28>
-    <label for="number-of-datapoints">datapoints</label>
+    <div id="input-container">
+      <label for="number-of-datapoints">Base moving average on</label>
+      <input type="number" id="number-of-datapoints" name="number-of-datapoints" value=28 min=2>
+      <label for="number-of-datapoints">datapoints</label>
+    </div>
   </div>
   </div>
   <div id="root"></div>

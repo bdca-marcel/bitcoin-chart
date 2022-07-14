@@ -17,8 +17,8 @@ const createMovingAverageData = (data, numberOfPoints) => {
 function BitcoinChart() {
   let width = 720,
     height = 480,
-    movingAverageNumberOfDatapoints = 28;
-  margins = { top: 20, right: 40, bottom: 40, left: 80 },
+    movingAverageNumberOfDatapoints = 28,
+    margins = { top: 20, right: 40, bottom: 40, left: 80 },
     xScaleBand = d3.scaleBand(),
     xScaleUtc = d3.scaleUtc(),
     yScale = d3.scaleLinear(),
@@ -30,6 +30,13 @@ function BitcoinChart() {
 
 
   function chart(selection) {
+
+    function candleColor(selection) {
+      selection
+        .attr("fill", (d) => (d.open > d.close ? "red" : "green"));
+
+      return selection;
+    }
     selection.each(function (data) {
 
       margins.contentWidth = width - margins.left - margins.right;
@@ -179,6 +186,8 @@ function BitcoinChart() {
         .data(d => [d]) // (re-)bind the data passed down from the candleselection as if it is an array, so we can use join
         .join("rect")
         .attr("class", "candlewick")
+        .call(candleColor)
+        // .attr("fill", (d) => (d.open > d.close ? "red" : "green"))
         .attr("x", (d) => xScaleBand(xAccessor(d)) + xScaleBand.bandwidth() / 2 - 1) // -1 om precies in het midden te zetten bij een oneven breedte
         .attr("y", (d) => yScale(d.max))
         .attr("width", 1)
@@ -190,7 +199,8 @@ function BitcoinChart() {
         .data(d => [d]) // (re-)bind the data passed down from the candleselection as if it is an array, so we can use join
         .join("rect")
         .attr("class", "candlebody")
-        .attr("fill", (d) => (d.open > d.close ? "red" : "green"))
+        .call(candleColor)
+        // .attr("fill", (d) => (d.open > d.close ? "red" : "green"))
         .attr("x", (d) => xScaleBand(xAccessor(d)))
         .attr("y", (d) => yScale(d.open > d.close ? d.open : d.close))
         .attr("width", xScaleBand.bandwidth())
@@ -258,9 +268,12 @@ function BitcoinChart() {
               remove => remove.remove())
         })
 
+
+      //******************************************
+      // MOVING AVERAGE TRENDLINE
+      //******************************************
       const movingAverageData = createMovingAverageData(data, movingAverageNumberOfDatapoints);
       // console.log(movingAverageData)
-
 
       const lineGenerator = d3.line()
         .x(d => xScaleUtc(xAccessorTime(d)))
@@ -336,24 +349,28 @@ const loadChart = (jsonName, movingAverageNumberOfDatapoints) => {
   }).catch(err => console.log(err))
 }
 
-loadChart('juni-1w.json')
-
-const onClick = (target) => {
-  selectedJsonName = target;
-  loadChart(`juni-${selectedJsonName}.json`, movingAverageNumberOfDatapoints)
-}
+loadChart('2022-1w.json')
 
 const btns = document.querySelectorAll('.btn')
 
+const onClick = (btn) => {
+  selectedJsonName = btn.dataset.target;
+  loadChart(`2022-${selectedJsonName}.json`, movingAverageNumberOfDatapoints)
+
+  btns.forEach(btn => btn.classList.remove("selected"))
+  btn.classList.add("selected")
+}
+
+
 btns.forEach(btn => {
-  btn.addEventListener('click', () => onClick(btn.dataset.target))
+  btn.addEventListener('click', () => onClick(btn))
 })
 
 const movingAvgInput = document.querySelector('#number-of-datapoints');
 
 const onInputChange = (value) => {
   movingAverageNumberOfDatapoints = value;
-  loadChart(`juni-${selectedJsonName}.json`, movingAverageNumberOfDatapoints)
+  loadChart(`2022-${selectedJsonName}.json`, movingAverageNumberOfDatapoints)
 }
 
 movingAvgInput.addEventListener('change', (e) => onInputChange(e.target.value))
