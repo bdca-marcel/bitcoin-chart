@@ -12,6 +12,7 @@ function BitcoinChart() {
     timeFormatter = d3.timeFormat("%d %b %H:%M"),
     xPadding = 0.2;
 
+
   function chart(selection) {
     selection.each(function (data) {
       margins.contentWidth = width - margins.left - margins.right;
@@ -91,7 +92,12 @@ function BitcoinChart() {
         container.select("#tooltip-y").remove();
       })
 
-      container.on("mousemove", (e) => {
+      container.on("mousemove", (event) => {
+
+        const [x, y] = d3.pointer(event);
+
+        if (y > margins.contentHeight) return;
+
         container.selectAll('#tooltip-horizontal-line')
           .data([1])
           .join('line')
@@ -101,8 +107,8 @@ function BitcoinChart() {
           .attr("stroke-dasharray", 4)
           .attr("x1", 0)
           .attr("x2", margins.contentWidth)
-          .attr("y1", e.clientY - margins.top)
-          .attr("y2", e.clientY - margins.top)
+          .attr("y1", y)
+          .attr("y2", y)
 
         const tooltipY = container.selectAll('#tooltip-y')
           .data([1])
@@ -116,33 +122,31 @@ function BitcoinChart() {
                 .attr('stroke', "black")
                 .attr('stroke-width', 2)
                 .attr("x", -margins.left)
-                .attr("y", e.clientY - margins.top - 10)
+                .attr("y", y - 10)
                 .attr("width", margins.left)
                 .attr("height", 20)
 
               g.append('text')
                 .attr("x", -10)
-                .attr("y", e.clientY - margins.top)
+                .attr("y", y)
                 .attr("dominant-baseline", "middle")
                 .attr("text-anchor", 'end')
                 .attr("fill", "white")
-                .text(`$${Math.round(yScale.invert(e.clientY - margins.top))}`)
+                .text(`$${Math.round(yScale.invert(y))}`)
             }
             ,
             update => {
               update.select('rect')
-                .attr("y", e.clientY - margins.top - 10)
+                .attr("y", y - 10)
 
               update.select('text')
-                .attr("y", e.clientY - margins.top)
-                .text(`$${Math.round(yScale.invert(e.clientY - margins.top))}`)
+                .attr("y", y)
+                .text(`$${Math.round(yScale.invert(y))}`)
 
               return update
             }
             ,
             remove => remove.remove())
-
-
       })
 
       const candles = container.select("#candles");
@@ -159,9 +163,9 @@ function BitcoinChart() {
         .attr("class", "candlewick")
         .attr("x", (d) => xScaleBand(xAccessor(d)) + xScaleBand.bandwidth() / 2 - 1) // -1 om precies in het midden te zetten bij een oneven breedte
         .attr("y", (d) => yScale(d.max))
-        .attr("width", 3)
+        .attr("width", 1)
         .attr("height", (d) => Math.abs(yScale(d.max) - yScale(d.min)));
-        // .attr("height", (d) => margins.contentHeight);
+      // .attr("height", (d) => margins.contentHeight);
 
       candleSelection
         .selectAll(".candlebody")
@@ -267,7 +271,7 @@ function createSVGSVGElement(width, height, id) {
 }
 
 const width = 1080,
-  height = 600;
+  height = 480;
 
 const svgBasicShapesSelection = createSVGSVGElement(
   width,
@@ -277,11 +281,23 @@ const svgBasicShapesSelection = createSVGSVGElement(
 
 const newBitCoinChart = BitcoinChart().width(width).height(height);
 
-const data = d3.json('data/juni-1d.json').then(result => {
+const loadChart = (jsonName) => {
 
-  const transformedData = transformer(result)
-  svgBasicShapesSelection.datum(transformedData).call(newBitCoinChart);
+  d3.json(`data/${jsonName}`).then(result => {
+    const transformedData = transformer(result)
+    svgBasicShapesSelection.datum(transformedData).call(newBitCoinChart);
+  }).catch(err => console.log(err))
 
-}).catch(err => console.log(err))
+}
 
+loadChart('juni-1w.json')
 
+const onClick = (target) => {
+  loadChart(`juni-${target}.json`)
+}
+
+const btns = document.querySelectorAll('.btn')
+
+btns.forEach(btn => {
+  btn.addEventListener('click', () => onClick(btn.dataset.target))
+})
