@@ -64,6 +64,8 @@ function BitcoinChart() {
 
       container
         .select("#xAxis")
+        .transition()
+        .duration(500)
         .attr("transform", `translate(0, ${margins.contentHeight})`)
         .call(xAxis);
 
@@ -80,7 +82,8 @@ function BitcoinChart() {
 
       container
         .select("#yAxis")
-        // .attr("transform",
+        .transition()
+        .duration(500)
         .call(yAxis);
 
       container.selectAll("#yAxis .tick text").style("font-size", "16px");
@@ -239,6 +242,30 @@ function BitcoinChart() {
               ,
               remove => remove.remove())
         })
+
+      // ZOOM CODE
+
+      // const zoomed = (event) => {
+      //   const transform = event.transform;
+      //   console.log(transform)
+      // }
+
+      // const zoom = d3.zoom().on('zoom', zoomed)
+
+      // svgSelection
+      //   .append('rect')
+      //   .attr('id', 'zoom-rect')
+      //   .style('opacity', 0)
+      //   .attr('fill', 'white')
+      //   .attr('x', 0)
+      //   .attr('y', 0)
+      //   .attr('width', margins.contentWidth)
+      //   .attr('height', margins.contentHeight)
+
+      // const zoomRect = svgSelection.select('#zoom-rect');
+
+      // zoomRect.call(zoom)
+
     });
   }
 
